@@ -1,0 +1,10 @@
+package internal
+
+const (
+	IDUnconnectedPing byte = 0x01
+	IDUnconnectedPong byte = 0x1c
+)
+
+// unconnectedMessageSequence is a sequence of bytes which is found in every unconnected message sent in
+// RakNet.
+var unconnectedMessageSequence = [16]byte{0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe, 0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56, 0x78}
