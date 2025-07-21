@@ -17,3 +17,4 @@ This should work on most servers. However, this may not work on some servers, es
 Error code 2148916254: Wait a minute and try again.  
 403 error when signing in: Try again. If you keep getting this error, make sure the time on your computer is set right. Even just a few minutes off can cause issues.  
 401 error when signing in: Try again.  
+invalid_grant error when signing in: This is usually due to an issue with your Microsoft account. If your account does not have a password, try adding one in account settings.
