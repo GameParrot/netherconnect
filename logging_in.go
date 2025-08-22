@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 
 func (a *appInst) LoggingInScreen(w fyne.Window) fyne.CanvasObject {
 	go func() {
+		a.tokenSource(w)
 		if err := a.login(); err != nil {
 			text := canvas.NewText("Failed to log in", fyne.CurrentApp().Settings().Theme().Color(theme.ColorNameForeground, fyne.CurrentApp().Settings().ThemeVariant()))
 			text.TextSize = 50
@@ -25,12 +28,12 @@ func (a *appInst) LoggingInScreen(w fyne.Window) fyne.CanvasObject {
 				w.SetContent(a.LoggingInScreen(w))
 			})
 			logout := widget.NewButton("Log out", func() {
-				Auth.Logout()
+				os.Remove(path.Join(fyne.CurrentApp().Storage().RootURI().Path(), "token.json"))
 				a.xsts = nil
 				a.playfabIdentity = nil
 				a.lastUpdateTime = time.Time{}
 				a.xuid = ""
-				fyne.Do(func() { w.SetContent(a.LoginContent(w)) })
+				w.SetContent(a.LoggingInScreen(w))
 			})
 			fyne.Do(func() { w.SetContent(container.NewCenter(container.NewVBox(text, infoText, tryAgainButton, logout))) })
 		} else {

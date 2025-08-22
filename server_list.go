@@ -110,15 +110,14 @@ func (a *appInst) ServerListContent(w fyne.Window, alreadyConnected bool) fyne.C
 	})
 
 	logout := widget.NewButton("Log out", func() {
-		Auth.Logout()
-		os.Remove(path.Join(fyne.CurrentApp().Storage().RootURI().Path(), "auth.tok"))
+		os.Remove(path.Join(fyne.CurrentApp().Storage().RootURI().Path(), "token.json"))
 		a.xsts = nil
 		a.lastUpdateTime = time.Time{}
 		a.xuid = ""
 		if pinger != nil {
 			pinger.Close()
 		}
-		fyne.Do(func() { w.SetContent(a.LoginContent(w)) })
+		fyne.Do(func() { w.SetContent(a.LoggingInScreen(w)) })
 	})
 
 	return container.NewBorder(container.NewCenter(text), container.NewVBox(addServer, logout), nil, nil, tree)
