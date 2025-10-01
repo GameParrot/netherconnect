@@ -1,7 +1,6 @@
 package franchise
 
 import (
-	"github.com/gameparrot/netherconnect/franchise/internal"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -9,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/gameparrot/netherconnect/auth/franchise/internal"
 
 	"github.com/google/uuid"
 	"golang.org/x/text/language"
@@ -27,6 +28,7 @@ const (
 	ConfigurationValidation = "validation"
 )
 
+// Token starts the session and returns the session token
 func (conf TokenConfig) Token() (*Token, error) {
 	if conf.Environment == nil {
 		return nil, errors.New("minecraft/franchise: TokenConfig: Environment is nil")
@@ -47,7 +49,7 @@ func (conf TokenConfig) Token() (*Token, error) {
 		return nil, fmt.Errorf("make request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", internal.UserAgent)
+	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -106,25 +108,15 @@ type DeviceConfig struct {
 	Type               string    `json:"type,omitempty"`
 }
 
-const (
-	ApplicationTypeMinecraftPE = "MinecraftPE"
-)
+const ApplicationTypeMinecraftPE = "MinecraftPE"
 
-const (
-	CapabilityRayTracing = "RayTracing"
-)
+const CapabilityRayTracing = "RayTracing"
 
-const (
-	PlatformWindows10 = "Windows10"
-)
+const PlatformWindows10 = "Windows10"
 
-const (
-	StorePlatformUWPStore = "uwp.store"
-)
+const StorePlatformUWPStore = "uwp.store"
 
-const (
-	DeviceTypeWindows10 = "Windows10"
-)
+const DeviceTypeWindows10 = "Windows10"
 
 type UserConfig struct {
 	Language     language.Tag `json:"language,omitempty"`
@@ -134,6 +126,4 @@ type UserConfig struct {
 	TokenType    string       `json:"tokenType,omitempty"`
 }
 
-const (
-	TokenTypePlayFab = "PlayFab"
-)
+const TokenTypePlayFab = "PlayFab"

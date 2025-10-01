@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"path"
@@ -11,14 +10,10 @@ import (
 	_ "unsafe"
 
 	"github.com/gameparrot/netherconnect/auth"
-	"github.com/gameparrot/netherconnect/franchise"
-	"github.com/gameparrot/netherconnect/franchise/signaling"
-	"github.com/gameparrot/netherconnect/playfab"
 	"golang.org/x/oauth2"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 )
 
@@ -27,16 +22,11 @@ type appInst struct {
 
 	tokenSrc oauth2.TokenSource
 
-	env          franchise.AuthorizationEnvironment
-	signalingEnv signaling.Environment
+	authSession *auth.Session
 
-	xsts           *auth.XBLToken
 	currentAddr    string
 	currentAddrRaw string
 	xuid           string
-	lastUpdateTime time.Time
-
-	playfabIdentity *playfab.Identity
 
 	servers []server
 
@@ -60,36 +50,26 @@ func main() {
 	w := a.NewWindow("NetherConnect")
 	w.SetMaster()
 
-	if err := appInst.initDiscovery(); err != nil {
-		w.Resize(fyne.NewSize(640, 460))
-
-		errDialog := dialog.NewError(fmt.Errorf("failed to init discovery: %w", err), w)
-		errDialog.SetOnClosed(func() {
-			os.Exit(0)
-		})
-		errDialog.Show()
-	} else {
-		serverFile, err := os.ReadFile(path.Join(fyne.CurrentApp().Storage().RootURI().Path(), "servers.json"))
-		if err == nil {
-			json.Unmarshal(serverFile, &appInst.servers)
-		} else if errors.Is(err, os.ErrNotExist) {
-			appInst.addFeaturedServers()
-		}
-
-		w.Resize(fyne.NewSize(640, 460))
-
-		go func() {
-			time.Sleep(100 * time.Millisecond)
-			fyne.Do(func() { w.SetContent(appInst.LoggingInScreen(w)) })
-		}()
-
-		w.SetOnClosed(func() {
-			jsonData, err := json.Marshal(appInst.servers)
-			if err == nil {
-				os.WriteFile(path.Join(fyne.CurrentApp().Storage().RootURI().Path(), "servers.json"), jsonData, 0644)
-			}
-		})
+	serverFile, err := os.ReadFile(path.Join(fyne.CurrentApp().Storage().RootURI().Path(), "servers.json"))
+	if err == nil {
+		json.Unmarshal(serverFile, &appInst.servers)
+	} else if errors.Is(err, os.ErrNotExist) {
+		appInst.addFeaturedServers()
 	}
+
+	w.Resize(fyne.NewSize(640, 460))
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		fyne.Do(func() { w.SetContent(appInst.LoggingInScreen(w)) })
+	}()
+
+	w.SetOnClosed(func() {
+		jsonData, err := json.Marshal(appInst.servers)
+		if err == nil {
+			os.WriteFile(path.Join(fyne.CurrentApp().Storage().RootURI().Path(), "servers.json"), jsonData, 0644)
+		}
+	})
 
 	w.ShowAndRun()
 }

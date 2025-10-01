@@ -1,7 +1,6 @@
 package signaling
 
 import (
-	"github.com/gameparrot/netherconnect/franchise"
 	"context"
 	"fmt"
 	"log/slog"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 
 	"github.com/df-mc/go-nethernet"
+	"github.com/gameparrot/netherconnect/auth/franchise"
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"nhooyr.io/websocket"
 )
 
@@ -20,7 +21,7 @@ type Dialer struct {
 	Log       *slog.Logger
 }
 
-func (d Dialer) DialContext(ctx context.Context, src franchise.TokenConfigSource, env *Environment) (*Conn, error) {
+func (d Dialer) DialContext(ctx context.Context, tok *franchise.Token) (*Conn, error) {
 	if d.Options == nil {
 		d.Options = &websocket.DialOptions{}
 	}
@@ -36,27 +37,19 @@ func (d Dialer) DialContext(ctx context.Context, src franchise.TokenConfigSource
 	if d.Log == nil {
 		d.Log = slog.Default()
 	}
-	/*var hasTransport bool
-	if base := d.Options.HTTPClient.Transport; base != nil {
-		_, hasTransport = base.(*franchise.Transport)
-	}
-	if !hasTransport {
-		d.Options.HTTPClient.Transport = &franchise.Transport{
-			Source: src,
-			Base:   d.Options.HTTPClient.Transport,
-		}
-	}*/
 
-	// TODO(lactyy): Move to *franchise.Transport
-	conf, err := src.TokenConfig()
+	d.Options.HTTPHeader.Set("Authorization", tok.AuthorizationHeader)
+
+	var env Environment
+
+	discovery, err := franchise.Discover(protocol.CurrentVersion)
 	if err != nil {
-		return nil, fmt.Errorf("request token config: %w", err)
+		return nil, fmt.Errorf("discover: %w", err)
 	}
-	t, err := conf.Token()
-	if err != nil {
-		return nil, fmt.Errorf("request token: %w", err)
+
+	if err := discovery.Environment(&env, franchise.EnvironmentTypeProduction); err != nil {
+		return nil, fmt.Errorf("decode environment: %w", err)
 	}
-	d.Options.HTTPHeader.Set("Authorization", t.AuthorizationHeader)
 
 	u, err := url.Parse(env.ServiceURI)
 	if err != nil {

@@ -1,7 +1,7 @@
 package signaling
 
 import (
-	"github.com/gameparrot/netherconnect/franchise/internal"
+	"github.com/gameparrot/netherconnect/signaling/internal"
 	"context"
 	"encoding/json"
 	"strconv"

@@ -4,7 +4,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -29,9 +28,7 @@ func (a *appInst) LoggingInScreen(w fyne.Window) fyne.CanvasObject {
 			})
 			logout := widget.NewButton("Log out", func() {
 				os.Remove(path.Join(fyne.CurrentApp().Storage().RootURI().Path(), "token.json"))
-				a.xsts = nil
-				a.playfabIdentity = nil
-				a.lastUpdateTime = time.Time{}
+				a.authSession = nil
 				a.xuid = ""
 				w.SetContent(a.LoggingInScreen(w))
 			})

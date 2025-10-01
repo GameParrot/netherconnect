@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -17,70 +16,18 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/gameparrot/netherconnect/auth"
-	"github.com/gameparrot/netherconnect/franchise"
-	"github.com/gameparrot/netherconnect/playfab"
 	"golang.org/x/oauth2"
-
-	"github.com/sandertv/gophertunnel/minecraft/protocol"
 )
 
-func (a *appInst) initDiscovery() error {
-	discovery, err := franchise.Discover(protocol.CurrentVersion)
-	if err != nil {
-		return fmt.Errorf("discover: %w", err)
-	}
-	if err := discovery.Environment(&a.env, franchise.EnvironmentTypeProduction); err != nil {
-		return fmt.Errorf("decode environment: %w", err)
-	}
-
-	if err := discovery.Environment(&a.signalingEnv, franchise.EnvironmentTypeProduction); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (a *appInst) updateXstsToken() (*auth.XblTokenObtainer, error) {
-	if time.Since(a.lastUpdateTime) < 45*time.Minute {
-		return nil, nil
-	}
-	liveToken, err := a.tokenSrc.Token()
-	if err != nil {
-		return nil, fmt.Errorf("request Live Connect token: %w", err)
-	}
-
-	obtainer, err := auth.NewXblTokenObtainer(liveToken, context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("request Live Device token: %w", err)
-	}
-
-	a.xsts, err = obtainer.RequestXBLToken(context.Background(), "https://multiplayer.minecraft.net/")
-	if err != nil {
-		return nil, fmt.Errorf("request XBOX Live token: %w", err)
-	}
-
-	playfabXBL, err := obtainer.RequestXBLToken(context.Background(), "http://playfab.xboxlive.com/")
-	if err != nil {
-		return nil, fmt.Errorf("request Playfab token: %w", err)
-	}
-
-	a.playfabIdentity, err = playfab.Login{
-		Title:         "20CA2",
-		CreateAccount: true,
-	}.WithXBLToken(playfabXBL).Login()
-	if err != nil {
-		return nil, fmt.Errorf("error logging in to playfab: %w", err)
-	}
-
-	a.lastUpdateTime = time.Now()
-	return obtainer, nil
-}
+var DevicePreview = auth.Device{ClientID: "00000000403fc600", DeviceType: "iOS", Version: "0.0.0"}
 
 func (a *appInst) login() error {
-	obtainer, err := a.updateXstsToken()
+	var err error
+	a.authSession, err = auth.SessionFromTokenSource(a.tokenSrc, DevicePreview, context.Background())
 	if err != nil {
 		return err
 	}
-	accountInfoTok, err := obtainer.RequestXBLToken(context.Background(), "http://xboxlive.com")
+	accountInfoTok, err := a.authSession.Obtainer().RequestXBLToken(context.Background(), "http://xboxlive.com")
 	if err != nil {
 		return fmt.Errorf("request XBOX site token: %w", err)
 	}
@@ -119,7 +66,7 @@ func (a *appInst) requestToken(w fyne.Window) *oauth2.Token {
 	), w.Canvas())
 	fyne.Do(func() { popup.Show() })
 
-	token, err := auth.RequestLiveTokenWriter(&fyneTextWriter{label: label, done: func(err error) {
+	token, err := auth.RequestLiveTokenWriterDevice(&fyneTextWriter{label: label, done: func(err error) {
 		fyne.Do(func() { popup.Hide() })
 		if err != nil {
 			err := dialog.NewError(fmt.Errorf("failed to sign in: %w", err), w)
@@ -128,7 +75,7 @@ func (a *appInst) requestToken(w fyne.Window) *oauth2.Token {
 			})
 			err.Show()
 		}
-	}})
+	}}, DevicePreview)
 	if err != nil {
 		popup.Hide()
 		err := dialog.NewError(fmt.Errorf("failed to sign in: %w", err), w)
@@ -150,12 +97,12 @@ func (a *appInst) tokenSource(w fyne.Window) {
 	} else {
 		token = a.requestToken(w)
 	}
-	src := auth.RefreshTokenSource(token)
+	src := auth.RefreshTokenSourceDevice(token, DevicePreview)
 	_, err = src.Token()
 	if err != nil {
 		// The cached refresh token expired and can no longer be used to obtain a new token. We require the
 		// user to log in again and use that token instead.
-		src = auth.RefreshTokenSource(a.requestToken(w))
+		src = auth.RefreshTokenSourceDevice(a.requestToken(w), DevicePreview)
 	}
 	tok, _ := src.Token()
 	b, _ := json.Marshal(tok)

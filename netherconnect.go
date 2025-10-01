@@ -20,8 +20,6 @@ import (
 )
 
 func (a *appInst) startNethernet() error {
-	a.updateXstsToken()
-
 	singlaingConn, err := a.startNethernetListener()
 	if err != nil {
 		return fmt.Errorf("start nethernet listener: %w", err)
@@ -97,7 +95,7 @@ func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.L
 	defer rkConn.Close()
 	defer conn.Close()
 
-	if err := serverConn.Login(cd, a.xsts, clientConn.Protocol()); err != nil {
+	if err := serverConn.Login(cd, a.authSession, clientConn.Protocol()); err != nil {
 		a.log.Error("Failed to login to server", "err", err.Error())
 		clientConn.WritePacket(&packet.Disconnect{Message: "Error: " + err.Error()})
 		time.Sleep(1 * time.Second)

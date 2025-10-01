@@ -13,13 +13,15 @@ import (
 
 	"github.com/gameparrot/netherconnect/auth"
 
+	"github.com/gameparrot/netherconnect/proxy/newlogin"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
+
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
 
-func (conn *ProxyConn) Login(clientData login.ClientData, xsts *auth.XBLToken, protocol int32) (err error) {
+func (conn *ProxyConn) Login(clientData login.ClientData, authSession *auth.Session, protocol int32) (err error) {
 	if err := conn.WritePacket(&packet.RequestNetworkSettings{ClientProtocol: protocol}); err != nil {
 		return fmt.Errorf("send request network settings: %w", err)
 	}
@@ -27,6 +29,12 @@ func (conn *ProxyConn) Login(clientData login.ClientData, xsts *auth.XBLToken, p
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	key, _ := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+
+	xsts, err := authSession.LegacyMultiplayerXBL(context.Background())
+	if err != nil {
+		return err
+	}
+
 	var chainData string
 
 	chainData, err = authChain(ctx, xsts, key)
@@ -41,8 +49,13 @@ func (conn *ProxyConn) Login(clientData login.ClientData, xsts *auth.XBLToken, p
 	conn.clientData = clientData
 	conn.privateKey = key
 
-	request := login.Encode(chainData, conn.clientData, key, false)
-	identityData, _, _, _ = login.Parse(request)
+	newTok, err := authSession.MultiplayerToken(context.Background(), key)
+	if err != nil {
+		return err
+	}
+
+	request := newlogin.Encode(chainData, newTok.SignedToken, conn.clientData, key, false)
+	identityData, _, _, _ = newlogin.Parse(request)
 	// If we got the identity data from Minecraft auth, we need to make sure we set it in the Conn too, as
 	// we are not aware of the identity data ourselves yet.
 	conn.identityData = identityData

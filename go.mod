@@ -8,13 +8,14 @@ require (
 	fyne.io/fyne/v2 v2.6.3
 	github.com/akmalfairuz/legacy-version v1.6.0
 	github.com/df-mc/go-nethernet v0.0.0-20250326113854-da40ae9a1339
+	github.com/df-mc/go-playfab v0.0.0-00010101000000-000000000000
 	github.com/go-jose/go-jose/v4 v4.1.2
 	github.com/google/uuid v1.6.0
 	github.com/nyaosorg/go-windows-su v0.2.1
 	github.com/sandertv/go-raknet v1.14.3-0.20250305181847-6af3e95113d6
 	github.com/sandertv/gophertunnel v1.49.0
-	golang.org/x/oauth2 v0.30.0
-	golang.org/x/text v0.28.0
+	golang.org/x/oauth2 v0.31.0
+	golang.org/x/text v0.29.0
 	nhooyr.io/websocket v1.8.17
 )
 
@@ -22,6 +23,7 @@ require (
 	fyne.io/systray v1.11.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/df-mc/go-xsapi v0.0.0-20240902102602-e7c4bffb955f // indirect
 	github.com/fredbi/uri v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fyne-io/gl-js v0.2.0 // indirect
@@ -67,13 +69,17 @@ require (
 	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
-	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/crypto v0.42.0 // indirect
 	golang.org/x/image v0.30.0 // indirect
-	golang.org/x/net v0.43.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace github.com/akmalfairuz/legacy-version => github.com/gameparrot/legacy-version-no-mapping v1.5.5-0.20250815010928-f00c81ff9c07
 
 replace github.com/sandertv/go-raknet => github.com/gameparrot/go-raknet v1.14.3-0.20250716213139-5fa641152f77
+
+replace github.com/df-mc/go-xsapi => github.com/lactyy/go-xsapi v0.0.0-20240911052022-1b9dffef64ab
+
+replace github.com/df-mc/go-playfab => github.com/lactyy/go-playfab v0.0.0-20240911042657-037f6afe426f
