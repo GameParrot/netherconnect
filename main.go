@@ -4,16 +4,19 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"net/url"
 	"os"
 	"path"
 	"time"
 	_ "unsafe"
 
 	"github.com/gameparrot/netherconnect/auth"
+	"github.com/gameparrot/netherconnect/github"
 	"golang.org/x/oauth2"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 )
 
@@ -32,6 +35,11 @@ type appInst struct {
 
 	nethernetId string
 }
+
+const (
+	repo = "gameparrot/netherconnect"
+	tag  = "v1.3.1"
+)
 
 func (a *appInst) addFeaturedServers() {
 	a.servers = append(a.servers, server{Name: "The Hive", IP: "geo.hivebedrock.network", Port: 19132})
@@ -62,6 +70,23 @@ func main() {
 	go func() {
 		time.Sleep(100 * time.Millisecond)
 		fyne.Do(func() { w.SetContent(appInst.LoggingInScreen(w)) })
+	}()
+
+	go func() {
+		latest, err := github.GetLatestRelease(repo)
+		if err != nil {
+			appInst.log.Error(err.Error())
+			return
+		}
+		if latest.TagName != tag {
+			info := dialog.NewConfirm("Update Available", "A new version of NetherConnect is available. Do you want to download it?", func(b bool) {
+				if b {
+					url, _ := url.Parse("https://github.com/" + repo + "/releases/latest")
+					a.OpenURL(url)
+				}
+			}, w)
+			info.Show()
+		}
 	}()
 
 	w.SetOnClosed(func() {
