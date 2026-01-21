@@ -1,13 +1,13 @@
 package signaling
 
 import (
-	"github.com/gameparrot/netherconnect/signaling/internal"
 	"context"
 	"encoding/json"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/gameparrot/netherconnect/signaling/internal"
 
 	"github.com/df-mc/go-nethernet"
 	"nhooyr.io/websocket"
@@ -30,7 +30,7 @@ type Conn struct {
 func (c *Conn) Signal(signal *nethernet.Signal) error {
 	return c.write(Message{
 		Type: MessageTypeSignal,
-		To:   json.Number(strconv.FormatUint(signal.NetworkID, 10)),
+		To:   json.Number(signal.NetworkID),
 		Data: signal.String(),
 	})
 }
@@ -98,7 +98,7 @@ func (c *Conn) read(cancel context.CancelCauseFunc) {
 				continue
 			}
 			var err error
-			s.NetworkID, err = strconv.ParseUint(message.From, 10, 64)
+			s.NetworkID = message.From
 			if err != nil {
 				c.d.Log.Error("error parsing network ID of signal", internal.ErrAttr(err))
 				continue
@@ -121,7 +121,7 @@ func (c *Conn) Close() (err error) {
 	return err
 }
 
-func (c *Conn) NetworkID() uint64 {
+func (c *Conn) NetworkID() string {
 	return c.d.NetworkID
 }
 

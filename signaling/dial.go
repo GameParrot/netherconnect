@@ -17,7 +17,7 @@ import (
 
 type Dialer struct {
 	Options   *websocket.DialOptions
-	NetworkID uint64
+	NetworkID string
 	Log       *slog.Logger
 }
 
@@ -31,8 +31,8 @@ func (d Dialer) DialContext(ctx context.Context, tok *franchise.Token) (*Conn, e
 	if d.Options.HTTPHeader == nil {
 		d.Options.HTTPHeader = make(http.Header) // TODO(lactyy): Move to *franchise.Transport
 	}
-	if d.NetworkID == 0 {
-		d.NetworkID = rand.Uint64()
+	if d.NetworkID == "" {
+		d.NetworkID = strconv.FormatUint(rand.Uint64(), 10)
 	}
 	if d.Log == nil {
 		d.Log = slog.Default()
@@ -56,7 +56,7 @@ func (d Dialer) DialContext(ctx context.Context, tok *franchise.Token) (*Conn, e
 		return nil, fmt.Errorf("parse service URI: %w", err)
 	}
 
-	c, _, err := websocket.Dial(ctx, u.JoinPath("/ws/v1.0/signaling/", strconv.FormatUint(d.NetworkID, 10)).String(), d.Options)
+	c, _, err := websocket.Dial(ctx, u.JoinPath("/ws/v1.0/signaling/", d.NetworkID).String(), d.Options)
 	if err != nil {
 		return nil, err
 	}

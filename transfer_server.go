@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/gameparrot/netherconnect/proxy"
 	"bytes"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
+
+	"github.com/gameparrot/netherconnect/proxy"
 
 	"github.com/akmalfairuz/legacy-version/legacyver/legacypacket"
 	"github.com/akmalfairuz/legacy-version/legacyver/proto"
@@ -78,17 +78,20 @@ decodeLoop:
 		return errors.New("netherconnect requires 1.21.90 or newer")
 	}
 	writePacketToEncoder(&packet.NetworkSettings{CompressionAlgorithm: packet.FlateCompression.EncodeCompression()}, encoder, protocolId)
+	writePacketToEncoder(&packet.PlayStatus{Status: packet.PlayStatusLoginSuccess}, encoder, protocolId)
 	encoder.EnableCompression(packet.FlateCompression)
+	writePacketToEncoder(&legacypacket.ResourcePacksInfo{}, encoder, protocolId)
+	writePacketToEncoder(&legacypacket.ResourcePackStack{}, encoder, protocolId)
 	writePacketToEncoder(&legacypacket.StartGame{PlayerMovementSettings: (&proto.PlayerMovementSettings{}).FromLatest(protocol.PlayerMovementSettings{})}, encoder, protocolId)
 
-	if a.nethernetId == 0 {
+	if a.nethernetId == "" {
 		err := a.startNethernet()
 		if err != nil {
 			return err
 		}
 	}
 
-	writePacketToEncoder(&legacypacket.Transfer{Address: strconv.FormatUint(a.nethernetId, 10)}, encoder, protocolId)
+	writePacketToEncoder(&legacypacket.Transfer{Address: a.nethernetId}, encoder, protocolId)
 	time.Sleep(1 * time.Second)
 	conn.Close()
 	return nil

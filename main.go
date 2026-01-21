@@ -30,7 +30,7 @@ type appInst struct {
 
 	servers []server
 
-	nethernetId uint64
+	nethernetId string
 }
 
 func (a *appInst) addFeaturedServers() {

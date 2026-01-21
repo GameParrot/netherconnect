@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
+	"strconv"
 
 	"github.com/gameparrot/netherconnect/signaling"
 
@@ -12,7 +13,7 @@ import (
 
 func (a *appInst) startNethernetListener() (nethernet.Signaling, error) {
 	sd := signaling.Dialer{
-		NetworkID: rand.Uint64(),
+		NetworkID: strconv.FormatUint(rand.Uint64(), 10),
 		Log:       a.log,
 	}
 	mcTok, err := a.authSession.MCToken(context.Background())

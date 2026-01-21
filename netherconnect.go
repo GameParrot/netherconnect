@@ -29,7 +29,7 @@ func (a *appInst) startNethernet() error {
 	if err != nil {
 		return err
 	}
-	a.log.Info("Network ID: " + strconv.FormatUint(singlaingConn.NetworkID(), 10))
+	a.log.Info("Network ID: " + singlaingConn.NetworkID())
 
 	go func() {
 		for {
@@ -49,7 +49,7 @@ func (a *appInst) startNethernet() error {
 
 func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.Listener) {
 	list.Close()
-	a.nethernetId = 0
+	a.nethernetId = ""
 
 	pendingTransfer := false
 
@@ -154,7 +154,7 @@ func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.L
 					a.currentAddrRaw = net.JoinHostPort(transfer.Address, portStr)
 					a.currentAddr = net.JoinHostPort(bestIp, portStr)
 
-					if a.nethernetId == 0 {
+					if a.nethernetId == "" {
 						err := a.startNethernet()
 						if err != nil {
 							a.log.Error("Failed to start NetherNet", "err", err.Error())
@@ -164,7 +164,7 @@ func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.L
 						}
 					}
 
-					clientConn.WritePacket(&legacypacket.Transfer{Address: strconv.FormatUint(a.nethernetId, 10)})
+					clientConn.WritePacket(&legacypacket.Transfer{Address: a.nethernetId})
 					time.Sleep(1 * time.Second)
 					return
 				}
