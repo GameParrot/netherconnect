@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/gameparrot/netherconnect/utils"
 	"bytes"
 	"os/exec"
 	"runtime"
+
+	"github.com/gameparrot/netherconnect/utils"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -37,9 +38,13 @@ func checkNetIsolation(w fyne.Window) {
 func (a *appInst) ConnectedScreen(w fyne.Window, alreadyConnected bool) fyne.CanvasObject {
 	if !alreadyConnected {
 		checkNetIsolation(w)
-		a.startTransferServer(func(err error) {
-			dialog.NewError(err, w).Show()
-		})
+		if !a.enableLanMode {
+			if err := a.startTransferServer(func(err error) {
+				dialog.NewError(err, w).Show()
+			}); err != nil {
+				dialog.NewError(err, w).Show()
+			}
+		}
 	}
 
 	text := canvas.NewText("Server started", fyne.CurrentApp().Settings().Theme().Color(theme.ColorNameForeground, fyne.CurrentApp().Settings().ThemeVariant()))

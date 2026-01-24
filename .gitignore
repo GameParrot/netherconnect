@@ -1,3 +1,5 @@
 netherconnect
 .vscode/
 fyne-cross/
+*.exe
+build/

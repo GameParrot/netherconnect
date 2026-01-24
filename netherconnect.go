@@ -48,7 +48,9 @@ func (a *appInst) startNethernet() error {
 }
 
 func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.Listener) {
-	list.Close()
+	if list != nil {
+		list.Close()
+	}
 	a.nethernetId = ""
 
 	pendingTransfer := false
@@ -73,6 +75,13 @@ func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.L
 	}
 
 	a.log.Info("Client logged in")
+
+	if a.currentAddr == "" {
+		clientConn.WritePacket(&packet.Disconnect{Message: "You must choose a server first."})
+		time.Sleep(1 * time.Second)
+		conn.Close()
+		return
+	}
 
 	rkConn, err := raknet.Dial(a.currentAddr)
 	if err != nil {
@@ -154,17 +163,21 @@ func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.L
 					a.currentAddrRaw = net.JoinHostPort(transfer.Address, portStr)
 					a.currentAddr = net.JoinHostPort(bestIp, portStr)
 
-					if a.nethernetId == "" {
-						err := a.startNethernet()
-						if err != nil {
-							a.log.Error("Failed to start NetherNet", "err", err.Error())
-							clientConn.WritePacket(&packet.Disconnect{Message: "Error: " + err.Error()})
-							time.Sleep(1 * time.Second)
-							return
+					if a.enableLanMode {
+						clientConn.WritePacket(&legacypacket.Disconnect{Message: "You have been transferred, please rejoin."})
+					} else {
+						if a.nethernetId == "" {
+							err := a.startNethernet()
+							if err != nil {
+								a.log.Error("Failed to start NetherNet", "err", err.Error())
+								clientConn.WritePacket(&packet.Disconnect{Message: "Error: " + err.Error()})
+								time.Sleep(1 * time.Second)
+								return
+							}
 						}
-					}
 
-					clientConn.WritePacket(&legacypacket.Transfer{Address: a.nethernetId})
+						clientConn.WritePacket(&legacypacket.Transfer{Address: a.nethernetId})
+					}
 					time.Sleep(1 * time.Second)
 					return
 				}

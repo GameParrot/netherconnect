@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"slices"
+	"syscall"
 	"time"
 	_ "unsafe"
 
@@ -21,6 +23,8 @@ import (
 )
 
 type appInst struct {
+	enableLanMode bool
+
 	log *slog.Logger
 
 	tokenSrc oauth2.TokenSource
@@ -53,6 +57,10 @@ func (a *appInst) addFeaturedServers() {
 func main() {
 	appInst := &appInst{log: slog.Default()}
 
+	if len(os.Args) > 1 {
+		appInst.enableLanMode = slices.Contains(os.Args[1:], "--lan-mode")
+	}
+
 	a := app.NewWithID("com.gameparrot.netherconnect")
 	a.Settings().SetTheme(&forcedVariant{Theme: theme.DefaultTheme(), variant: theme.VariantDark})
 	w := a.NewWindow("NetherConnect")
@@ -66,6 +74,21 @@ func main() {
 	}
 
 	w.Resize(fyne.NewSize(640, 460))
+
+	if appInst.enableLanMode {
+		if err := appInst.startNethernetLan(func(err error) {
+			dialog.NewError(err, w).Show()
+		}); err != nil {
+			if errors.Is(err, syscall.EADDRINUSE) {
+				err = errors.New("you must start netherconnect before starting minecraft when in lan mode")
+			}
+			e := dialog.NewError(err, w)
+			e.SetOnClosed(fyne.CurrentApp().Quit)
+			e.Show()
+			w.ShowAndRun()
+			return
+		}
+	}
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
