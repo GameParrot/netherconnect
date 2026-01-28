@@ -12,7 +12,7 @@ import (
 	"github.com/df-mc/go-nethernet"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/service"
-	"nhooyr.io/websocket"
+	"github.com/coder/websocket"
 )
 
 type Dialer struct {

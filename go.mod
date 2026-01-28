@@ -5,6 +5,7 @@ go 1.25.1
 require (
 	fyne.io/fyne/v2 v2.7.2
 	github.com/akmalfairuz/legacy-version v1.6.0
+	github.com/coder/websocket v1.8.12
 	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/df-mc/go-nethernet v0.0.0-20260106140245-e6a86cbce687
 	github.com/df-mc/go-playfab v1.0.0
@@ -16,7 +17,6 @@ require (
 	github.com/sandertv/gophertunnel v1.53.0
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/text v0.33.0
-	nhooyr.io/websocket v1.8.17
 )
 
 require (

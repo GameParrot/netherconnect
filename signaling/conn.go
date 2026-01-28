@@ -10,8 +10,8 @@ import (
 	"github.com/gameparrot/netherconnect/signaling/internal"
 
 	"github.com/df-mc/go-nethernet"
-	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
+	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 )
 
 type Conn struct {
