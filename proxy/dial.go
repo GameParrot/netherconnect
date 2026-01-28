@@ -11,17 +11,18 @@ import (
 	"time"
 	_ "unsafe"
 
-	"github.com/gameparrot/netherconnect/auth"
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/gameparrot/netherconnect/session"
 
-	"github.com/gameparrot/netherconnect/proxy/newlogin"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/sandertv/gophertunnel/minecraft/auth"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
 
-func (conn *ProxyConn) Login(clientData login.ClientData, authSession *auth.Session, protocol int32) (err error) {
+func (conn *ProxyConn) Login(clientData login.ClientData, session *session.Session, protocol int32) (err error) {
 	if err := conn.WritePacket(&packet.RequestNetworkSettings{ClientProtocol: protocol}); err != nil {
 		return fmt.Errorf("send request network settings: %w", err)
 	}
@@ -30,7 +31,7 @@ func (conn *ProxyConn) Login(clientData login.ClientData, authSession *auth.Sess
 	defer cancel()
 	key, _ := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 
-	xsts, err := authSession.LegacyMultiplayerXBL(context.Background())
+	xsts, err := session.LegacyMultiplayerXBL(context.Background())
 	if err != nil {
 		return err
 	}
@@ -49,13 +50,18 @@ func (conn *ProxyConn) Login(clientData login.ClientData, authSession *auth.Sess
 	conn.clientData = clientData
 	conn.privateKey = key
 
-	newTok, err := authSession.MultiplayerToken(context.Background(), key)
+	newTok, err := session.MultiplayerToken(context.Background(), &key.PublicKey)
 	if err != nil {
 		return err
 	}
 
-	request := newlogin.Encode(chainData, newTok.SignedToken, conn.clientData, key, false)
-	identityData, _, _, _ = newlogin.Parse(request)
+	oidcV, err := oidcVerifier(context.Background())
+	if err != nil {
+		return err
+	}
+
+	request := login.Encode(chainData, conn.clientData, key, newTok, false)
+	identityData, _, _, _ = login.Parse(request, oidcV)
 	// If we got the identity data from Minecraft auth, we need to make sure we set it in the Conn too, as
 	// we are not aware of the identity data ourselves yet.
 	conn.identityData = identityData
@@ -110,3 +116,6 @@ func readChainIdentityData(chainData []byte) (login.IdentityData, error) {
 	}
 	return claims.ExtraData, nil
 }
+
+//go:linkname oidcVerifier github.com/sandertv/gophertunnel/minecraft.oidcVerifier
+func oidcVerifier(ctx context.Context) (*oidc.IDTokenVerifier, error)

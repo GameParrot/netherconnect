@@ -10,8 +10,8 @@ import (
 	"strconv"
 
 	"github.com/df-mc/go-nethernet"
-	"github.com/gameparrot/netherconnect/auth/franchise"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
+	"github.com/sandertv/gophertunnel/minecraft/service"
 	"nhooyr.io/websocket"
 )
 
@@ -21,7 +21,7 @@ type Dialer struct {
 	Log       *slog.Logger
 }
 
-func (d Dialer) DialContext(ctx context.Context, tok *franchise.Token) (*Conn, error) {
+func (d Dialer) DialContext(ctx context.Context, tok *service.Token) (*Conn, error) {
 	if d.Options == nil {
 		d.Options = &websocket.DialOptions{}
 	}
@@ -42,12 +42,12 @@ func (d Dialer) DialContext(ctx context.Context, tok *franchise.Token) (*Conn, e
 
 	var env Environment
 
-	discovery, err := franchise.Discover(protocol.CurrentVersion)
+	discovery, err := service.Discover(ctx, service.ApplicationTypeMinecraftPE, protocol.CurrentVersion)
 	if err != nil {
 		return nil, fmt.Errorf("discover: %w", err)
 	}
 
-	if err := discovery.Environment(&env, franchise.EnvironmentTypeProduction); err != nil {
+	if err := discovery.Environment(&env); err != nil {
 		return nil, fmt.Errorf("decode environment: %w", err)
 	}
 

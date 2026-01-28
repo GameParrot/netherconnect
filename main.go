@@ -12,8 +12,8 @@ import (
 	"time"
 	_ "unsafe"
 
-	"github.com/gameparrot/netherconnect/auth"
 	"github.com/gameparrot/netherconnect/github"
+	"github.com/gameparrot/netherconnect/session"
 	"golang.org/x/oauth2"
 
 	"fyne.io/fyne/v2"
@@ -29,7 +29,7 @@ type appInst struct {
 
 	tokenSrc oauth2.TokenSource
 
-	authSession *auth.Session
+	authSession *session.Session
 
 	currentAddr    string
 	currentAddrRaw string

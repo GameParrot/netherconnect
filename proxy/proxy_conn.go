@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/base64"
@@ -12,8 +13,10 @@ import (
 	"time"
 
 	"github.com/akmalfairuz/legacy-version/legacyver/proto"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	_ "github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
@@ -59,6 +62,8 @@ type ProxyConn struct {
 	deferredPackets [][]byte
 
 	requestNetworkSettingsHandled bool
+
+	oidcVerifier *oidc.IDTokenVerifier
 }
 
 func NewProxyConn(conn packetReader, isNethernet bool) *ProxyConn {
@@ -77,6 +82,9 @@ func (c *ProxyConn) IdentityData() login.IdentityData {
 
 func (c *ProxyConn) SetAuthEnabled(enabled bool) {
 	c.authEnabled = enabled
+	if enabled {
+		c.oidcVerifier, _ = oidcVerifier(context.Background())
+	}
 }
 
 func (c *ProxyConn) ReadLoop() error {
@@ -203,7 +211,7 @@ func (conn *ProxyConn) handleLogin(pk *packet.Login) error {
 		err        error
 		authResult login.AuthResult
 	)
-	conn.identityData, conn.clientData, authResult, err = login.Parse(pk.ConnectionRequest)
+	conn.identityData, conn.clientData, authResult, err = login.Parse(pk.ConnectionRequest, conn.oidcVerifier)
 	if err != nil {
 		return fmt.Errorf("parse login request: %w", err)
 	}
@@ -231,8 +239,8 @@ func (conn *ProxyConn) handleRequestNetworkSettings() error {
 	}); err != nil {
 		return fmt.Errorf("send NetworkSettings: %w", err)
 	}
-	conn.enc.EnableCompression(conn.compression)
-	conn.dec.EnableCompression(1024 * 1024 * 1024)
+	conn.enc.EnableCompression(conn.compression, 1)
+	conn.dec.EnableCompression(conn.compression, 1024*1024*1024)
 	return nil
 }
 
@@ -242,8 +250,8 @@ func (conn *ProxyConn) handleNetworkSettings(pk *packet.NetworkSettings) error {
 	if !ok {
 		return fmt.Errorf("unknown compression algorithm %v", pk.CompressionAlgorithm)
 	}
-	conn.enc.EnableCompression(alg)
-	conn.dec.EnableCompression(1024 * 1024 * 1024)
+	conn.enc.EnableCompression(alg, int(pk.CompressionThreshold))
+	conn.dec.EnableCompression(alg, 1024*1024*1024)
 	if conn.loginPk != nil {
 		conn.WritePacket(conn.loginPk)
 	}

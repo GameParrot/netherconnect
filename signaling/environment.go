@@ -6,4 +6,4 @@ type Environment struct {
 	TurnURI    string `json:"turnUri"`
 }
 
-func (e *Environment) EnvironmentName() string { return "signaling" }
+func (e *Environment) ServiceName() string { return "signaling" }

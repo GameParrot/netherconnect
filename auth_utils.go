@@ -15,19 +15,20 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/gameparrot/netherconnect/auth"
+	"github.com/gameparrot/netherconnect/session"
+	"github.com/sandertv/gophertunnel/minecraft/auth"
 	"golang.org/x/oauth2"
 )
 
-var DevicePreview = auth.Device{ClientID: "00000000403fc600", DeviceType: "iOS", Version: "0.0.0"}
+var DevicePreview = auth.Config{ClientID: "00000000403fc600", DeviceType: "iOS", Version: "0.0.0"}
 
 func (a *appInst) login() error {
 	var err error
-	a.authSession, err = auth.SessionFromTokenSource(a.tokenSrc, DevicePreview, context.Background())
+	a.authSession, err = session.SessionFromTokenSource(a.tokenSrc, DevicePreview, context.Background())
 	if err != nil {
 		return err
 	}
-	accountInfoTok, err := a.authSession.Obtainer().RequestXBLToken(context.Background(), "http://xboxlive.com")
+	accountInfoTok, err := a.authSession.RequestXBLToken(context.Background(), "http://xboxlive.com")
 	if err != nil {
 		return fmt.Errorf("request XBOX site token: %w", err)
 	}
@@ -66,7 +67,7 @@ func (a *appInst) requestToken(w fyne.Window) *oauth2.Token {
 	), w.Canvas())
 	fyne.Do(func() { popup.Show() })
 
-	token, err := auth.RequestLiveTokenWriterDevice(&fyneTextWriter{label: label, done: func(err error) {
+	token, err := DevicePreview.RequestLiveTokenWriter(&fyneTextWriter{label: label, done: func(err error) {
 		fyne.Do(func() { popup.Hide() })
 		if err != nil {
 			err := dialog.NewError(fmt.Errorf("failed to sign in: %w", err), w)
@@ -75,7 +76,7 @@ func (a *appInst) requestToken(w fyne.Window) *oauth2.Token {
 			})
 			err.Show()
 		}
-	}}, DevicePreview)
+	}})
 	if err != nil {
 		popup.Hide()
 		err := dialog.NewError(fmt.Errorf("failed to sign in: %w", err), w)
@@ -97,12 +98,12 @@ func (a *appInst) tokenSource(w fyne.Window) {
 	} else {
 		token = a.requestToken(w)
 	}
-	src := auth.RefreshTokenSourceDevice(token, DevicePreview)
+	src := DevicePreview.RefreshTokenSource(token)
 	_, err = src.Token()
 	if err != nil {
 		// The cached refresh token expired and can no longer be used to obtain a new token. We require the
 		// user to log in again and use that token instead.
-		src = auth.RefreshTokenSourceDevice(a.requestToken(w), DevicePreview)
+		src = DevicePreview.RefreshTokenSource(a.requestToken(w))
 	}
 	tok, _ := src.Token()
 	b, _ := json.Marshal(tok)

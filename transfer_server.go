@@ -65,7 +65,7 @@ decodeLoop:
 			if pkData.Header().PacketID == packet.IDRequestNetworkSettings {
 				pk := &packet.RequestNetworkSettings{}
 				pk.Marshal(protocol.NewReader(bytes.NewReader(pkData.Payload().Bytes()), 0, true))
-				decoder.EnableCompression(1024 * 1024 * 8)
+				decoder.EnableCompression(packet.FlateCompression, 1024*1024*8)
 				protocolId = pk.ClientProtocol
 				break decodeLoop
 			}
@@ -79,7 +79,7 @@ decodeLoop:
 	}
 	writePacketToEncoder(&packet.NetworkSettings{CompressionAlgorithm: packet.FlateCompression.EncodeCompression()}, encoder, protocolId)
 	writePacketToEncoder(&packet.PlayStatus{Status: packet.PlayStatusLoginSuccess}, encoder, protocolId)
-	encoder.EnableCompression(packet.FlateCompression)
+	encoder.EnableCompression(packet.FlateCompression, 1)
 	writePacketToEncoder(&legacypacket.ResourcePacksInfo{}, encoder, protocolId)
 	writePacketToEncoder(&legacypacket.ResourcePackStack{}, encoder, protocolId)
 	writePacketToEncoder(&legacypacket.StartGame{PlayerMovementSettings: (&proto.PlayerMovementSettings{}).FromLatest(protocol.PlayerMovementSettings{})}, encoder, protocolId)
