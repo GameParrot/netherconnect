@@ -9,9 +9,9 @@ import (
 
 	"github.com/gameparrot/netherconnect/signaling/internal"
 
-	"github.com/df-mc/go-nethernet"
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+	"github.com/df-mc/go-nethernet"
 )
 
 type Conn struct {
@@ -27,7 +27,11 @@ type Conn struct {
 	signals chan *nethernet.Signal
 }
 
-func (c *Conn) Signal(signal *nethernet.Signal) error {
+func (c *Conn) Context() context.Context {
+	return c.ctx
+}
+
+func (c *Conn) Signal(ctx context.Context, signal *nethernet.Signal) error {
 	return c.write(Message{
 		Type: MessageTypeSignal,
 		To:   json.Number(signal.NetworkID),
@@ -125,15 +129,15 @@ func (c *Conn) NetworkID() string {
 	return c.d.NetworkID
 }
 
-func (c *Conn) Notify(n nethernet.Notifier) (stop func()) {
+func (c *Conn) Notify(signals chan<- *nethernet.Signal) (stop func()) {
 	go func() {
 		for {
-			c, err := c.ReadSignal()
+			sig, err := c.ReadSignal()
 			if err != nil {
-				n.NotifyError(nethernet.ErrSignalingStopped)
+				close(signals)
 				return
 			}
-			n.NotifySignal(c)
+			signals <- sig
 		}
 	}()
 	return func() {
