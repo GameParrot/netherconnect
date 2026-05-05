@@ -85,7 +85,7 @@ decodeLoop:
 	writePacketToEncoder(&legacypacket.StartGame{PlayerMovementSettings: (&proto.PlayerMovementSettings{}).FromLatest(protocol.PlayerMovementSettings{})}, encoder, protocolId)
 
 	if a.nethernetId == "" {
-		err := a.startNethernet()
+		err := a.startNethernet(protocolId)
 		if err != nil {
 			return err
 		}

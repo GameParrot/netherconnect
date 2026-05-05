@@ -19,8 +19,14 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
 
-func (a *appInst) startNethernet() error {
-	singlaingConn, err := a.startNethernetListener()
+func (a *appInst) startNethernet(protocolId int32) error {
+	var singlaingConn nethernet.Signaling
+	var err error
+	if protocolId >= 974 {
+		singlaingConn, err = a.startNethernetListener()
+	} else {
+		singlaingConn, err = a.startLegacyNethernetListener()
+	}
 	if err != nil {
 		return fmt.Errorf("start nethernet listener: %w", err)
 	}
@@ -167,7 +173,7 @@ func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.L
 						clientConn.WritePacket(&legacypacket.Disconnect{Message: "You have been transferred, please rejoin."})
 					} else {
 						if a.nethernetId == "" {
-							err := a.startNethernet()
+							err := a.startNethernet(clientConn.Protocol())
 							if err != nil {
 								a.log.Error("Failed to start NetherNet", "err", err.Error())
 								clientConn.WritePacket(&packet.Disconnect{Message: "Error: " + err.Error()})

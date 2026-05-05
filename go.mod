@@ -7,6 +7,7 @@ require (
 	github.com/akmalfairuz/legacy-version v1.6.0
 	github.com/coder/websocket v1.8.14
 	github.com/coreos/go-oidc/v3 v3.17.0
+	github.com/creachadair/jrpc2 v1.3.5
 	github.com/df-mc/go-nethernet v1.0.3
 	github.com/df-mc/go-playfab v1.0.0
 	github.com/df-mc/go-xsapi v1.0.1
@@ -23,6 +24,7 @@ require (
 	fyne.io/systray v1.12.0 // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/andreburgaud/crypt2go v1.8.0 // indirect
+	github.com/creachadair/mds v0.26.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/df-mc/jsonc v1.0.5 // indirect
 	github.com/fredbi/uri v1.1.1 // indirect
@@ -72,6 +74,7 @@ require (
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/image v0.36.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
