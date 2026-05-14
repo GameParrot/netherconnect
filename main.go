@@ -42,7 +42,7 @@ type appInst struct {
 
 const (
 	repo = "gameparrot/netherconnect"
-	tag  = "v1.4.0"
+	tag  = "v1.5.0"
 )
 
 func (a *appInst) addFeaturedServers() {
