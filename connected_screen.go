@@ -1,43 +1,16 @@
 package main
 
 import (
-	"bytes"
-	"os/exec"
-	"runtime"
-
-	"github.com/gameparrot/netherconnect/utils"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-
-	su "github.com/nyaosorg/go-windows-su"
 )
-
-func checkNetIsolation(w fyne.Window) {
-	if runtime.GOOS != "windows" {
-		// Only an issue on Windows.
-		return
-	}
-	data, _ := exec.Command("CheckNetIsolation", "LoopbackExempt", "-s", `-n="microsoft.minecraftuwp_8wekyb3d8bbwe"`).CombinedOutput()
-	if bytes.Contains(data, []byte("microsoft.minecraftuwp_8wekyb3d8bbwe")) {
-		return
-	}
-	utils.ShowAlert(w.Canvas(), "To allow connection, you have to exempt Minecraft from\n loopback restrictions. Click continue to proceed.", "Continue", func() {
-		_, _ = su.ShellExecute(su.RUNAS,
-			"CheckNetIsolation",
-			"LoopbackExempt -a -n=\"Microsoft.MinecraftUWP_8wekyb3d8bbwe\"",
-			`C:\`)
-
-	})
-}
 
 func (a *appInst) ConnectedScreen(w fyne.Window, alreadyConnected bool) fyne.CanvasObject {
 	if !alreadyConnected {
-		checkNetIsolation(w)
 		if !a.enableLanMode {
 			if err := a.startTransferServer(func(err error) {
 				dialog.NewError(err, w).Show()

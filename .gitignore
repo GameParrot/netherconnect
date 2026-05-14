@@ -3,3 +3,4 @@ netherconnect
 fyne-cross/
 *.exe
 build/
+fyne_metadata_init.go
