@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/akmalfairuz/legacy-version/legacyver/proto"
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -88,14 +87,6 @@ func (c *ProxyConn) SetAuthEnabled(enabled bool) {
 }
 
 func (c *ProxyConn) ReadLoop() error {
-	if c.nethernet {
-		go func() {
-			time.Sleep(3 * time.Second) // hack to fix requestnetworksettings occasionally not being received
-			if !c.requestNetworkSettingsHandled {
-				c.handleRequestNetworkSettings()
-			}
-		}()
-	}
 	for {
 		pks, err := c.ReadPackets()
 		if err != nil {
@@ -301,6 +292,17 @@ func (conn *ProxyConn) WritePacket(pk packet.Packet) error {
 
 	io := proto.NewWriter(protocol.NewWriter(b, 0), conn.protocolId)
 	pk.Marshal(io)
+
+	return conn.WritePackets([][]byte{b.Bytes()})
+}
+
+func WriteLegacyPacket[T packet.Packet](conn *ProxyConn, pk T, marshalFn func(io protocol.IO, pk T)) error {
+	b := bytes.NewBuffer(nil)
+	conn.hdr.PacketID = pk.ID()
+	_ = conn.hdr.Write(b)
+
+	io := proto.NewWriter(protocol.NewWriter(b, 0), conn.protocolId)
+	marshalFn(io, pk)
 
 	return conn.WritePackets([][]byte{b.Bytes()})
 }

@@ -25,7 +25,7 @@ func (a *appInst) startNethernetLan(errorFunc func(error)) error {
 		TransportLayer: 2,
 		ConnectionType: 4,
 	})
-	l, err := nethernet.ListenConfig{Log: a.log}.Listen(d)
+	l, err := nethernet.ListenConfig{Log: a.log, DisableTrickleICE: true}.Listen(d)
 	if err != nil {
 		return err
 	}

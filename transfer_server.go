@@ -74,15 +74,15 @@ decodeLoop:
 
 	encoder := packet.NewEncoder(conn)
 	if protocolId < proto.ID818 {
-		writePacketToEncoder(&legacypacket.Disconnect{Message: "NetherConnect requires Minecraft 1.21.90 or newer."}, encoder, protocolId)
+		writeLegacyPacketToEncoder(&packet.Disconnect{Message: "NetherConnect requires Minecraft 1.21.90 or newer."}, legacypacket.Disconnect, encoder, protocolId)
 		return errors.New("netherconnect requires 1.21.90 or newer")
 	}
 	writePacketToEncoder(&packet.NetworkSettings{CompressionAlgorithm: packet.FlateCompression.EncodeCompression()}, encoder, protocolId)
 	writePacketToEncoder(&packet.PlayStatus{Status: packet.PlayStatusLoginSuccess}, encoder, protocolId)
 	encoder.EnableCompression(packet.FlateCompression, 1)
-	writePacketToEncoder(&legacypacket.ResourcePacksInfo{}, encoder, protocolId)
-	writePacketToEncoder(&legacypacket.ResourcePackStack{}, encoder, protocolId)
-	writePacketToEncoder(&legacypacket.StartGame{PlayerMovementSettings: (&proto.PlayerMovementSettings{}).FromLatest(protocol.PlayerMovementSettings{})}, encoder, protocolId)
+	writeLegacyPacketToEncoder(&packet.ResourcePacksInfo{}, legacypacket.ResourcePacksInfo, encoder, protocolId)
+	writeLegacyPacketToEncoder(&packet.ResourcePackStack{}, legacypacket.ResourcePackStack, encoder, protocolId)
+	writeLegacyStartGameToEncoder(&packet.StartGame{}, encoder, protocolId)
 
 	if a.nethernetId == "" {
 		err := a.startNethernet(protocolId)
@@ -91,7 +91,7 @@ decodeLoop:
 		}
 	}
 
-	writePacketToEncoder(&legacypacket.Transfer{Address: a.nethernetId}, encoder, protocolId)
+	writeLegacyPacketToEncoder(&packet.Transfer{Address: a.nethernetId}, legacypacket.Transfer, encoder, protocolId)
 	time.Sleep(1 * time.Second)
 	conn.Close()
 	return nil
@@ -102,5 +102,21 @@ func writePacketToEncoder(pk packet.Packet, enc *packet.Encoder, protocolId int3
 	buf := bytes.NewBuffer([]byte{})
 	header.Write(buf)
 	pk.Marshal(proto.NewWriter(protocol.NewWriter(buf, 0), protocolId))
+	enc.Encode([][]byte{buf.Bytes()})
+}
+
+func writeLegacyPacketToEncoder[T packet.Packet](pk T, marshalFn func(i protocol.IO, pk T), enc *packet.Encoder, protocolId int32) {
+	header := packet.Header{PacketID: pk.ID()}
+	buf := bytes.NewBuffer([]byte{})
+	header.Write(buf)
+	marshalFn(proto.NewWriter(protocol.NewWriter(buf, 0), protocolId), pk)
+	enc.Encode([][]byte{buf.Bytes()})
+}
+
+func writeLegacyStartGameToEncoder(pk *packet.StartGame, enc *packet.Encoder, protocolId int32) {
+	header := packet.Header{PacketID: pk.ID()}
+	buf := bytes.NewBuffer([]byte{})
+	header.Write(buf)
+	legacypacket.StartGame(proto.NewWriter(protocol.NewWriter(buf, 0), protocolId), pk, []protocol.ItemEntry{})
 	enc.Encode([][]byte{buf.Bytes()})
 }

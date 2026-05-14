@@ -117,7 +117,7 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 		defer func() {
 			if err != nil {
 				j.log.Error(err.Error())
-				j.Close()
+				//j.Close()
 				return
 			}
 		}()
@@ -127,15 +127,21 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 			ID    string `json:"Id"`
 		}
 		if err := req.UnmarshalParams(&batch); err != nil {
-			return nil, fmt.Errorf("handle %q: decode parameters: %w", req.Method(), err)
+			j.log.Error(err.Error())
+			return nil, nil
+			//return nil, fmt.Errorf("handle %q: decode parameters: %w", req.Method(), err)
 		}
 		for _, msg := range batch {
 			var inner *jrpc2.ParsedRequest
 			if err := json.Unmarshal([]byte(msg.Inner), &inner); err != nil {
-				return nil, fmt.Errorf("handle %q: decode inner message: %w", req.Method(), err)
+				j.log.Error(err.Error())
+				return nil, nil
+				//return nil, fmt.Errorf("handle %q: decode inner message: %w", req.Method(), err)
 			}
 			if inner == nil {
-				return nil, fmt.Errorf("handle %q: invalid batch message in params", req.Method())
+				j.log.Error(fmt.Sprintf("handle %q: invalid batch message in params", req.Method()))
+				return nil, nil
+				//return nil, fmt.Errorf("handle %q: invalid batch message in params", req.Method())
 			}
 
 			switch inner.Method {
@@ -145,15 +151,21 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 					Data        string `json:"message"`
 				}
 				if err := json.Unmarshal(inner.Params, &params); err != nil {
-					return nil, fmt.Errorf("handle %q: decode parameters in inner message: %w", req.Method(), err)
+					j.log.Error(err.Error())
+					return nil, nil
+					//return nil, fmt.Errorf("handle %q: decode parameters in inner message: %w", req.Method(), err)
 				}
 				if params.NetherNetID == "" || params.Data == "" {
-					return nil, fmt.Errorf("handle %q: invalid inner message", req.Method())
+					j.log.Error(fmt.Sprintf("handle %q: invalid inner message", req.Method()))
+					return nil, nil
+					//return nil, fmt.Errorf("handle %q: invalid inner message", req.Method())
 				}
 
 				signal := &nethernet.Signal{NetworkID: msg.From.String()}
 				if err := signal.UnmarshalText([]byte(params.Data)); err != nil {
-					return nil, fmt.Errorf("handle %q: decode inner message data to signal: %w", req.Method(), err)
+					j.log.Error(err.Error())
+					return nil, nil
+					//return nil, fmt.Errorf("handle %q: decode inner message data to signal: %w", req.Method(), err)
 				}
 
 				if signal.Type == nethernet.SignalTypeCandidate || signal.Type == nethernet.SignalTypeOffer {
@@ -182,23 +194,29 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 					"message":    string(b),
 				})
 				if err != nil {
-					return nil, fmt.Errorf("call Signaling_SendClientMessage_v1_0: %w", err)
+					j.log.Error(err.Error())
+					return nil, nil
+					//return nil, fmt.Errorf("call Signaling_SendClientMessage_v1_0: %w", err)
 				}
 				if resp.Error() != nil {
-					return nil, resp.Error()
+					j.log.Error(resp.Error().Error())
+					return nil, nil
+					//return nil, resp.Error()
 				}
 				return nil, nil
 			case "Signaling_DeliveryNotification_V1_0":
 				continue
 			default:
-				return nil, fmt.Errorf("handle %q: invalid inner message method: %q", req.Method(), inner.Method)
+				//return nil, fmt.Errorf("handle %q: invalid inner message method: %q", req.Method(), inner.Method)
 			}
 		}
 		return nil, nil
 	case "System_Pong_v1_0":
 		return nil, nil
 	default:
-		return nil, fmt.Errorf("unknown JSONRPC method: %q", req.Method())
+		return nil, nil
+
+		//return nil, fmt.Errorf("unknown JSONRPC method: %q", req.Method())
 	}
 }
 
@@ -232,8 +250,9 @@ func (j *Conn) Signal(ctx context.Context, signal *nethernet.Signal) error {
 func (j *Conn) Close() (err error) {
 	j.once.Do(func() {
 		err = j.conn.Close(websocket.StatusGoingAway, "")
+		err = errors.Join(err, j.client.Close())
 	})
-	return errors.Join(err, j.client.Close())
+	return err
 }
 
 func (c *Conn) ReadSignal() (*nethernet.Signal, error) {

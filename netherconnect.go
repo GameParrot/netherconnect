@@ -9,7 +9,6 @@ import (
 	_ "unsafe"
 
 	"github.com/gameparrot/netherconnect/proxy"
-	"github.com/gameparrot/netherconnect/utils"
 
 	"github.com/akmalfairuz/legacy-version/legacyver/legacypacket"
 	"github.com/akmalfairuz/legacy-version/legacyver/proto"
@@ -31,7 +30,7 @@ func (a *appInst) startNethernet(protocolId int32) error {
 		return fmt.Errorf("start nethernet listener: %w", err)
 	}
 
-	l, err := nethernet.ListenConfig{Log: a.log}.Listen(singlaingConn)
+	l, err := nethernet.ListenConfig{Log: a.log, DisableTrickleICE: true}.Listen(singlaingConn)
 	if err != nil {
 		return err
 	}
@@ -53,15 +52,13 @@ func (a *appInst) startNethernet(protocolId int32) error {
 	return nil
 }
 
-func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.Listener) {
+func (a *appInst) handleNetherNetConn(conn *nethernet.Conn, list *nethernet.Listener) {
 	if list != nil {
 		list.Close()
 	}
 	a.nethernetId = ""
 
 	pendingTransfer := false
-
-	conn := &utils.NethernetConnWithHeader{Conn: rawConn}
 
 	clientConn := proxy.NewProxyConn(conn, true)
 	clientConn.SetAuthEnabled(true)
@@ -159,9 +156,9 @@ func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.L
 			if data, err := proxy.ParseData(pk); err == nil {
 				if data.Header().PacketID == packet.IDTransfer {
 					pendingTransfer = true
-					transfer := &legacypacket.Transfer{}
+					transfer := &packet.Transfer{}
 					reader := proto.NewReader(protocol.NewReader(data.Payload(), 0, true), clientConn.Protocol())
-					transfer.Marshal(reader)
+					legacypacket.Transfer(reader, transfer)
 
 					portStr := strconv.Itoa(int(transfer.Port))
 					bestIp := GetLowestPingIP(transfer.Address, portStr, a.log)
@@ -170,7 +167,7 @@ func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.L
 					a.currentAddr = net.JoinHostPort(bestIp, portStr)
 
 					if a.enableLanMode {
-						clientConn.WritePacket(&legacypacket.Disconnect{Message: "You have been transferred, please rejoin."})
+						proxy.WriteLegacyPacket(clientConn, &packet.Disconnect{Message: "You have been transferred, please rejoin."}, legacypacket.Disconnect)
 					} else {
 						if a.nethernetId == "" {
 							err := a.startNethernet(clientConn.Protocol())
@@ -182,7 +179,7 @@ func (a *appInst) handleNetherNetConn(rawConn *nethernet.Conn, list *nethernet.L
 							}
 						}
 
-						clientConn.WritePacket(&legacypacket.Transfer{Address: a.nethernetId})
+						proxy.WriteLegacyPacket(clientConn, &packet.Transfer{Address: a.nethernetId}, legacypacket.Transfer)
 					}
 					time.Sleep(1 * time.Second)
 					return
