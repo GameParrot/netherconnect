@@ -112,6 +112,10 @@ func (s *Session) loginWithPlayfab(ctx context.Context) (err error) {
 	return nil
 }
 
+func (s *Session) ResetDeviceID() {
+	s.conf.Device.ID = uuid.NewString()
+}
+
 func (s *Session) obtainMcToken(ctx context.Context) (err error) {
 	playfabIdentity, err := s.PlayfabIdentity(ctx)
 	if err != nil {
