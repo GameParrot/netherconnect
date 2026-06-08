@@ -33,13 +33,22 @@ type Session struct {
 // SessionFromTokenSource creates a session from an XBOX token source and returns it.
 func SessionFromTokenSource(src oauth2.TokenSource, config auth.Config, ctx context.Context) (s *Session, err error) {
 	s = &Session{src: src, config: config}
-	if err := s.login(ctx); err != nil {
+	if err := s.login(ctx, true); err != nil {
 		return nil, err
 	}
 	return s, nil
 }
 
-func (s *Session) login(ctx context.Context) error {
+// SessionFromTokenSourceNoMcToken creates a session from an XBOX token source without requesting an MCToken and returns it.
+func SessionFromTokenSourceNoMcToken(src oauth2.TokenSource, config auth.Config, ctx context.Context) (s *Session, err error) {
+	s = &Session{src: src, config: config}
+	if err := s.login(ctx, false); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func (s *Session) login(ctx context.Context, mcToken bool) error {
 	_, err := s.Token()
 	if err != nil {
 		return fmt.Errorf("request token: %w", err)
@@ -74,6 +83,10 @@ func (s *Session) login(ctx context.Context) error {
 
 	if err = s.loginWithPlayfab(ctx); err != nil {
 		return err
+	}
+
+	if !mcToken {
+		return nil
 	}
 
 	return s.obtainMcToken(ctx)
