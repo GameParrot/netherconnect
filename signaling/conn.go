@@ -129,15 +129,14 @@ func (c *Conn) NetworkID() string {
 	return c.d.NetworkID
 }
 
-func (c *Conn) Notify(signals chan<- *nethernet.Signal) (stop func()) {
+func (c *Conn) Notify(n nethernet.Notifier) (stop func()) {
 	go func() {
 		for {
 			sig, err := c.ReadSignal()
 			if err != nil {
-				close(signals)
 				return
 			}
-			signals <- sig
+			n.NotifySignal(sig)
 		}
 	}()
 	return func() {
