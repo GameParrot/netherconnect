@@ -121,27 +121,25 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 				return
 			}
 		}()
-		var batch []struct {
-			From  uuid.UUID
-			Inner string `json:"Message"`
-			ID    string `json:"Id"`
-		}
+		var batch messageBatch
 		if err := req.UnmarshalParams(&batch); err != nil {
 			j.log.Error(err.Error())
 			return nil, nil
 			//return nil, fmt.Errorf("handle %q: decode parameters: %w", req.Method(), err)
 		}
 		for _, msg := range batch {
+			if msg.decodeErr != nil {
+				j.log.Error(msg.decodeErr.Error())
+				continue
+			}
 			var inner *jrpc2.ParsedRequest
 			if err := json.Unmarshal([]byte(msg.Inner), &inner); err != nil {
 				j.log.Error(err.Error())
-				return nil, nil
-				//return nil, fmt.Errorf("handle %q: decode inner message: %w", req.Method(), err)
+				continue
 			}
 			if inner == nil {
 				j.log.Error(fmt.Sprintf("handle %q: invalid batch message in params", req.Method()))
-				return nil, nil
-				//return nil, fmt.Errorf("handle %q: invalid batch message in params", req.Method())
+				continue
 			}
 
 			switch inner.Method {
@@ -152,20 +150,17 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 				}
 				if err := json.Unmarshal(inner.Params, &params); err != nil {
 					j.log.Error(err.Error())
-					return nil, nil
-					//return nil, fmt.Errorf("handle %q: decode parameters in inner message: %w", req.Method(), err)
+					continue
 				}
 				if params.NetherNetID == "" || params.Data == "" {
 					j.log.Error(fmt.Sprintf("handle %q: invalid inner message", req.Method()))
-					return nil, nil
-					//return nil, fmt.Errorf("handle %q: invalid inner message", req.Method())
+					continue
 				}
 
 				signal := &nethernet.Signal{NetworkID: msg.From.String()}
 				if err := signal.UnmarshalText([]byte(params.Data)); err != nil {
 					j.log.Error(err.Error())
-					return nil, nil
-					//return nil, fmt.Errorf("handle %q: decode inner message data to signal: %w", req.Method(), err)
+					continue
 				}
 
 				if signal.Type == nethernet.SignalTypeCandidate || signal.Type == nethernet.SignalTypeOffer {
@@ -181,13 +176,7 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 					j.signals <- signal
 				}
 
-				b, _ := json.Marshal(map[string]any{
-					"jsonrpc": "2.0",
-					"method":  "Signaling_DeliveryNotification_V1_0",
-					"params": map[string]any{
-						"netherNetId": j.localNetworkID,
-					},
-				})
+				b, _ := deliveryNotification(msg.ID)
 				resp, err := j.client.Call(ctx, "Signaling_SendClientMessage_v1_0", map[string]any{
 					"toPlayerId": msg.From,
 					"messageId":  msg.ID,
@@ -195,15 +184,13 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 				})
 				if err != nil {
 					j.log.Error(err.Error())
-					return nil, nil
-					//return nil, fmt.Errorf("call Signaling_SendClientMessage_v1_0: %w", err)
+					continue
 				}
 				if resp.Error() != nil {
 					j.log.Error(resp.Error().Error())
-					return nil, nil
-					//return nil, resp.Error()
+					continue
 				}
-				return nil, nil
+				continue
 			case "Signaling_DeliveryNotification_V1_0":
 				continue
 			default:
@@ -330,4 +317,45 @@ func (ch *websocketChannel) Recv() ([]byte, error) {
 
 func (ch *websocketChannel) Close() error {
 	return ch.Conn.Close(websocket.StatusGoingAway, "")
+}
+
+type messageEnvelope struct {
+	From      uuid.UUID
+	Inner     string `json:"Message"`
+	ID        string `json:"Id"`
+	decodeErr error
+}
+
+// deliveryNotification identifies the received message for the sender's pending offer.
+func deliveryNotification(messageID string) ([]byte, error) {
+	return json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"method":  "Signaling_DeliveryNotification_V1_0",
+		"params":  map[string]any{"messageId": messageID},
+	})
+}
+
+// messageBatch accepts the single-message and batched service responses.
+type messageBatch []messageEnvelope
+
+func (batch *messageBatch) UnmarshalJSON(data []byte) error {
+	var many []json.RawMessage
+	if err := json.Unmarshal(data, &many); err == nil {
+		decoded := make(messageBatch, 0, len(many))
+		for _, raw := range many {
+			var message messageEnvelope
+			if err := json.Unmarshal(raw, &message); err != nil {
+				message.decodeErr = err
+			}
+			decoded = append(decoded, message)
+		}
+		*batch = decoded
+		return nil
+	}
+	var one messageEnvelope
+	if err := json.Unmarshal(data, &one); err != nil {
+		return err
+	}
+	*batch = []messageEnvelope{one}
+	return nil
 }
