@@ -131,13 +131,11 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 			var inner *jrpc2.ParsedRequest
 			if err := json.Unmarshal([]byte(msg.Inner), &inner); err != nil {
 				j.log.Error(err.Error())
-				return nil, nil
-				//return nil, fmt.Errorf("handle %q: decode inner message: %w", req.Method(), err)
+				continue
 			}
 			if inner == nil {
 				j.log.Error(fmt.Sprintf("handle %q: invalid batch message in params", req.Method()))
-				return nil, nil
-				//return nil, fmt.Errorf("handle %q: invalid batch message in params", req.Method())
+				continue
 			}
 
 			switch inner.Method {
@@ -148,20 +146,17 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 				}
 				if err := json.Unmarshal(inner.Params, &params); err != nil {
 					j.log.Error(err.Error())
-					return nil, nil
-					//return nil, fmt.Errorf("handle %q: decode parameters in inner message: %w", req.Method(), err)
+					continue
 				}
 				if params.NetherNetID == "" || params.Data == "" {
 					j.log.Error(fmt.Sprintf("handle %q: invalid inner message", req.Method()))
-					return nil, nil
-					//return nil, fmt.Errorf("handle %q: invalid inner message", req.Method())
+					continue
 				}
 
 				signal := &nethernet.Signal{NetworkID: msg.From.String()}
 				if err := signal.UnmarshalText([]byte(params.Data)); err != nil {
 					j.log.Error(err.Error())
-					return nil, nil
-					//return nil, fmt.Errorf("handle %q: decode inner message data to signal: %w", req.Method(), err)
+					continue
 				}
 
 				if signal.Type == nethernet.SignalTypeCandidate || signal.Type == nethernet.SignalTypeOffer {
