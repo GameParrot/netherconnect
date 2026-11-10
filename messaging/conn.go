@@ -180,13 +180,11 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 				})
 				if err != nil {
 					j.log.Error(err.Error())
-					return nil, nil
-					//return nil, fmt.Errorf("call Signaling_SendClientMessage_v1_0: %w", err)
+					continue
 				}
 				if resp.Error() != nil {
 					j.log.Error(resp.Error().Error())
-					return nil, nil
-					//return nil, resp.Error()
+					continue
 				}
 				continue
 			case "Signaling_DeliveryNotification_V1_0":
