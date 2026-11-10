@@ -128,6 +128,10 @@ func (j *Conn) handleCallback(ctx context.Context, req *jrpc2.Request) (result a
 			//return nil, fmt.Errorf("handle %q: decode parameters: %w", req.Method(), err)
 		}
 		for _, msg := range batch {
+			if msg.decodeErr != nil {
+				j.log.Error(msg.decodeErr.Error())
+				continue
+			}
 			var inner *jrpc2.ParsedRequest
 			if err := json.Unmarshal([]byte(msg.Inner), &inner); err != nil {
 				j.log.Error(err.Error())
@@ -316,9 +320,10 @@ func (ch *websocketChannel) Close() error {
 }
 
 type messageEnvelope struct {
-	From  uuid.UUID
-	Inner string `json:"Message"`
-	ID    string `json:"Id"`
+	From      uuid.UUID
+	Inner     string `json:"Message"`
+	ID        string `json:"Id"`
+	decodeErr error
 }
 
 // deliveryNotification identifies the received message for the sender's pending offer.
@@ -334,9 +339,17 @@ func deliveryNotification(messageID string) ([]byte, error) {
 type messageBatch []messageEnvelope
 
 func (batch *messageBatch) UnmarshalJSON(data []byte) error {
-	var many []messageEnvelope
+	var many []json.RawMessage
 	if err := json.Unmarshal(data, &many); err == nil {
-		*batch = many
+		decoded := make(messageBatch, 0, len(many))
+		for _, raw := range many {
+			var message messageEnvelope
+			if err := json.Unmarshal(raw, &message); err != nil {
+				message.decodeErr = err
+			}
+			decoded = append(decoded, message)
+		}
+		*batch = decoded
 		return nil
 	}
 	var one messageEnvelope

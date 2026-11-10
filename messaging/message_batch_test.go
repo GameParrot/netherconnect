@@ -120,6 +120,31 @@ func TestCallbackProcessesFollowingSignalAfterAcknowledgementFailure(t *testing.
 	}
 }
 
+func TestCallbackSkipsMalformedEnvelopeAndProcessesFollowingSignal(t *testing.T) {
+	rpc := server.NewLocal(handler.Map{
+		"Signaling_SendClientMessage_v1_0": func(context.Context, *jrpc2.Request) (any, error) {
+			return struct{}{}, nil
+		},
+	}, nil)
+	defer rpc.Close()
+	conn := &Conn{client: rpc.Client, log: slog.New(slog.NewTextHandler(io.Discard, nil)), signals: make(chan *nethernet.Signal, 1)}
+	inner := `{"jsonrpc":"2.0","method":"Signaling_WebRtc_v1_0","params":{"netherNetId":"1","message":"CONNECTRESPONSE 1 answer"}}`
+	params, err := json.Marshal([]any{
+		map[string]any{"From": "invalid-uuid", "Message": inner, "Id": "bad"},
+		messageEnvelope{From: uuid.MustParse("00000000-0000-0000-0000-000000000001"), Inner: inner, ID: "good"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := (&jrpc2.ParsedRequest{Method: "Signaling_ReceiveMessage_v1_0", Params: params}).ToRequest()
+	if _, err := conn.handleCallback(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	if len(conn.signals) != 1 {
+		t.Fatalf("received %d signals, want the valid signal after the malformed envelope", len(conn.signals))
+	}
+}
+
 func TestDeliveryNotificationIdentifiesReceivedMessage(t *testing.T) {
 	const messageID = "00000000-0000-0000-0000-000000000001"
 	data, err := deliveryNotification(messageID)
